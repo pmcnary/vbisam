@@ -133,7 +133,7 @@ itreeload (const int ihandle, const int ikeynumber, const int ilength,
 			goto treeload_exit;
 		}
 		if (pstree->pskeycurr->iisdummy
-		 && pstree->pskeycurr->psprev 
+		 && pstree->pskeycurr->psprev
 		 && pstree->pskeycurr->psprev->iishigh) {
 			pstree->pskeycurr = pstree->pskeycurr->psprev;
 		}
@@ -727,7 +727,11 @@ ivbkeydelete (const int ihandle, const int ikeynumber)
 				pskey = pskey->psprev;
 				iforcerewrite = 1;
 			} else {
-				iresult = ivbnodefree (ihandle, pstree->tnodenumber);	/* BUG - didn't check iresult */
+				/* P1-2 FIX: check ivbnodefree return — unchecked here since 2004 */
+				iresult = ivbnodefree (ihandle, pstree->tnodenumber);
+				if (iresult) {
+					return iresult;		   /* Node free failed — index corrupt */
+				}
 				pstree = pstree->psparent;
 				vvbtreeallfree (ihandle, ikeynumber, pstree->pskeycurr->pschild);
 				pskey = pstree->pskeycurr;
