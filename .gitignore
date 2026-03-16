@@ -1,0 +1,17 @@
+autom4te.cache/
+*.o
+*.lo
+*.la
+*.a
+.libs/
+_libs/
+config.h
+config.log
+config.status
+config.cache
+stamp-h1
+Makefile
+Makefile.in~
+configure~
+config.h.in~
+libtool
