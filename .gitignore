@@ -15,3 +15,7 @@ Makefile.in~
 configure~
 config.h.in~
 libtool
+build/
+autom4te.cache/
+pre-inst-env
+core.*

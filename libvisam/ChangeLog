@@ -1,0 +1,100 @@
+
+2023-01-30  Ron Norman <rjn@inglenet.com>
+	* Updates to use the same index header as C|D-ISAM
+	* Fixes for Variable Length processing but still more 
+	  work needed in ischeck
+
+2021-02-18  Ron Norman <rjn@inglenet.com>
+	* Renamed to V-ISAM 
+
+2021-01-25  Ron Norman <rjn@inglenet.com>
+	* Removed use of likely/unlikely
+	* isinternal.h: added VBDICTNODE and CIDICTNODE
+			moved fields from DICTNODE to DICTINFO for runtime usage
+	* vbmemio.c:  Added vvbfreedict and changed isbuild & isopen to use it
+	* All modules: changed to reference data field instead of DICTINFO
+			Use of #if ISAMMODE replaced with check for iformat == x_ISAM_FILE
+			Many uses of inl_stquad/inl_ldquad replaced by compx routines
+
+2020-12-31  Ron Norman <rjn@inglenet.com>
+	* Summary of changes made the past few months:
+			Most of the changes are related to correctly handling
+			an ISAM file in C-ISAM format
+			Some changes are just tidy up of the coding style.
+			Some changes are related to when LOGGING is not requested
+			At the entry to an ISAM API function vbclrstatus is called
+			to reset all of the status flags.
+			On exit from an ISAM API function vbsetstatus is called 
+			which sets the 'isstat1' & 'isstat2' values.
+
+	* isinternal.h:  Numerous changes including a rewrite of the routines
+			for load/store of binary values
+	* isbuild.c:  the high order bits of 'mode' parameter are used to
+			pass the size of the duplicates number in the index and
+			the size of the index blocks divided by 512.
+			Changes to look for 'filename' as well as 'filename.dat'
+	* ischeck.c:  Changes to rebuild the ISAM file and put it back as the
+			name of the original. It used to leave it with a temp name.
+	* ishelper.c:  fixed code to 'fsync' on correct 'fd' value.
+	* vbkeysio.c:  add check to return 02 status for duplicate key ahead
+	* vblocking.c: Added the new functions vbclrstatus and vbsetstatus
+			vbdatfilename returns the name of the ISAM data file.
+			Other changes related to 'locking' using values to match C-ISAM
+	* vbnodememio.c: Changes for C-ISAM compatibility, mostly handling a
+			'duplicate' value of 2 or 4 bytes long
+
+2020-12-31  Simon Sobisch <simonsobisch@gnu.org>
+
+	* vbnodemio.c (iquicknodesave): remove some recalculation
+
+2020-12-29  Ron Norman <rjn@inglenet.com>
+	* isinternal.h:	Rewrite of inl_ld/st routines to correctly handle all cases
+	* general: Numerous other changes to remove compiler warnings
+
+2020-12-27  Simon Sobisch <simonsobisch@gnu.org>
+
+	* Makefile.am: cleanup and comments
+	* Makefile.am: depending on CISAM_MODE generate libvbcisam or libvbisam
+
+2020-12-14  Ron Norman <rjn@inglenet.com>
+
+	* Numerous updates to correctly support --with-compatcisam
+	  and process data files in correct C-ISAM format
+	* Added extern int IsamDupWidth which defines width of 'dupnumber'
+	  this may be either 2 or 4 and defaults to 2 for C-ISAM mode
+	  In VB-ISAM mode, it is actually 8
+	* Added extern int IsIDXBLOCK which defines index node size
+	    this is between 1024 and 2048 for C-ISAM
+	    this is 4095 for VB-ISAM mode
+
+2020-11-13  Ron Norman <rjn@inglenet.com>
+
+	* Several updates to correctly support --with-compatcisam
+	  and process data files in correct C-ISAM format
+
+2014-09-05  Ron Norman <rjn@inglenet.com>
+
+	* Added NULLKEY to vbisam.h
+	* The character to be tested is put into top byte of keydesc.kp_type
+	  so code referencing kp_type needs to do & BYTEMASK
+	  Changes to isread.c and ischeck.c to use BYTEMASK
+	  Changes to vbkeysio.c in the routine ivbkeyinsert to check for NULLKEY
+	  then scan key value and if NULL do not insert to that index
+
+2008-10-26  Cobol-IT
+
+	* vbdataio.c fct ttailnode correct group looking for variable length record
+	* vbdataio.c fct ivbdataread ivb datawrite debug for variable length record
+
+2008-08-02  Roger While <simrw@sim-basis.de>
+
+	* byteswap.h : Fix for broken gcc 3 versions
+
+2007-11-27  Roger While <simrw@sim-basis.de>
+
+	* 2.0 release. Lots of changes.
+
+2005-02-26  Roger While <simrw@sim-basis.de>
+
+	* 1.04 release. First release of libtoolized version.
+

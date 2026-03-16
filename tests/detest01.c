@@ -28,19 +28,21 @@
 #include	<limits.h>
 #include        <time.h>
 
-#include        <vbisam.h>
+#include        <visam.h>
 
 #define MAXLEN	256
 #define RECLEN	63
 
-int main (int iargc, char **ppcargv) {
+int
+main (int iargc, char **ppcargv)
+{
 
-	int		ireadcount=0, iresult=0, 
-			ifilehandle, key0, key1;
-	struct keydesc	skeydesc01, skeydesc02;
-	char		line0[21]="_aaaaaaaaaaaaaaaaaaa",
-			line1[38]="_ddddddddddddddddddddddddddddddddddd ";
-	unsigned char	crecord [MAXLEN];
+	vb_rtd_t   *vb_rtd = VB_GET_RTD;
+	int         ireadcount = 0, iresult = 0, ifilehandle, key0, key1;
+	struct keydesc skeydesc01, skeydesc02;
+	VB_CHAR     line0[21] = "_aaaaaaaaaaaaaaaaaaa",
+		line1[38] = "_ddddddddddddddddddddddddddddddddddd ";
+	VB_UCHAR    crecord[MAXLEN];
 
 	memset (&skeydesc01, 0, sizeof (skeydesc01));
 	skeydesc01.k_flags = ISNODUPS;
@@ -56,34 +58,36 @@ int main (int iargc, char **ppcargv) {
 	skeydesc02.k_leng = 3;
 	skeydesc02.k_type = CHARTYPE;
 
-	if (iargc != 2)  {
-		fprintf (stderr, "Usage: %s : { input file name prefix }\n", ppcargv [0]);
+	if (iargc != 2) {
+		fprintf (stderr, "Usage: %s : { input file name prefix }\n", ppcargv[0]);
 		exit (1);
 	} else {
-		ifilehandle = isopen (ppcargv[1], ISINPUT+ISFIXLEN+ISAUTOLOCK);
+		ifilehandle =
+			isopen ((VB_CHAR *) ppcargv[1], ISINPUT + ISFIXLEN + ISAUTOLOCK);
 		if (ifilehandle < 0) {
-			printf ("Error (%d) opening file %s\n", iserrno, ppcargv[1]);
+			printf ("Error (%d) opening file %s\n", vb_rtd->iserrno, ppcargv[1]);
 			exit (2);
 		}
 	}
 
-	key0 = 0; 
-	key1 = 800; /* Start position of secondary key */
-	sprintf((char *)crecord, "%03i%20s%03i%37s", key0, line0, key1, line1);
+	key0 = 0;
+	key1 = 800;						   /* Start position of secondary key */
+	sprintf ((char *) crecord, "%03i%20s%03i%37s", key0, line0, key1, line1);
 
-	iresult = isstart (ifilehandle, &skeydesc02, RECLEN, (char *)crecord, ISFIRST);
-	iresult = isread (ifilehandle, (char *)crecord, ISGTEQ);
+	iresult =
+		isstart (ifilehandle, &skeydesc02, RECLEN, (VB_CHAR *) crecord, ISFIRST);
+	iresult = isread (ifilehandle, (VB_CHAR *) crecord, ISGTEQ);
 	while (iresult == 0) {
 		ireadcount++;
-		crecord [RECLEN + 1] = '\0';
-		fprintf (stdout, "%c%c%c %c%c%c\n",  
-			crecord[23], crecord[24], crecord[25], 
-			crecord[0], crecord[1], crecord[2]);
-		iresult = isread (ifilehandle, (char *)crecord, ISNEXT);
+		crecord[RECLEN + 1] = '\0';
+		fprintf (stdout, "%c%c%c %c%c%c\n",
+				 crecord[23], crecord[24], crecord[25],
+				 crecord[0], crecord[1], crecord[2]);
+		iresult = isread (ifilehandle, (VB_CHAR *) crecord, ISNEXT);
 	}
 
-	if (iserrno != EENDFILE) {
-		fprintf (stderr, "Error : iserrno=%d\n", iserrno);
+	if (vb_rtd->iserrno != EENDFILE) {
+		fprintf (stderr, "Error : vb_rtd->iserrno=%d\n", vb_rtd->iserrno);
 	}
 
 	fprintf (stdout, "Audit summary:\n");

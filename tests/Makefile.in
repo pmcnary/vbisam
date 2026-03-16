@@ -14,6 +14,27 @@
 
 @SET_MAKE@
 
+#
+# Makefile vbisam/tests
+#
+# Copyright (C) 2007 Roger While
+# Copyright (C) 2020 Simon Sobisch
+#
+# This file is part of VBISAM.
+#
+# VBISAM is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Lesser General Public License as published
+# by the Free Software Foundation, either version 2.1 of the License,
+# or (at your option) any later version.
+#
+# VBISAM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with VBISAM.  If not, see <https://www.gnu.org/licenses/>.
+
 VPATH = @srcdir@
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
@@ -91,37 +112,40 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 noinst_PROGRAMS = mvtest$(EXEEXT) detest00$(EXEEXT) detest01$(EXEEXT) \
-	jvntest$(EXEEXT)
+	jvntest$(EXEEXT) mvtest2$(EXEEXT)
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
-	$(top_srcdir)/m4/longlong.m4 $(top_srcdir)/m4/ltoptions.m4 \
-	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 DIST_COMMON = $(srcdir)/Makefile.am $(am__DIST_COMMON)
-mkinstalldirs = $(install_sh) -d
+mkinstalldirs = $(SHELL) $(top_srcdir)/build_aux/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES = atlocal
 CONFIG_CLEAN_VPATH_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
-am_detest00_OBJECTS = detest00.$(OBJEXT)
-detest00_OBJECTS = $(am_detest00_OBJECTS)
+detest00_SOURCES = detest00.c
+detest00_OBJECTS = detest00.$(OBJEXT)
 detest00_LDADD = $(LDADD)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-am_detest01_OBJECTS = detest01.$(OBJEXT)
-detest01_OBJECTS = $(am_detest01_OBJECTS)
+detest01_SOURCES = detest01.c
+detest01_OBJECTS = detest01.$(OBJEXT)
 detest01_LDADD = $(LDADD)
-am_jvntest_OBJECTS = jvntest.$(OBJEXT)
-jvntest_OBJECTS = $(am_jvntest_OBJECTS)
+jvntest_SOURCES = jvntest.c
+jvntest_OBJECTS = jvntest.$(OBJEXT)
 jvntest_LDADD = $(LDADD)
-am_mvtest_OBJECTS = mvtest.$(OBJEXT)
-mvtest_OBJECTS = $(am_mvtest_OBJECTS)
+mvtest_SOURCES = mvtest.c
+mvtest_OBJECTS = mvtest.$(OBJEXT)
 mvtest_LDADD = $(LDADD)
+mvtest2_SOURCES = mvtest2.c
+mvtest2_OBJECTS = mvtest2.$(OBJEXT)
+mvtest2_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -135,10 +159,11 @@ am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
 am__v_at_1 = 
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
-depcomp = $(SHELL) $(top_srcdir)/depcomp
+depcomp = $(SHELL) $(top_srcdir)/build_aux/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/detest00.Po ./$(DEPDIR)/detest01.Po \
-	./$(DEPDIR)/jvntest.Po ./$(DEPDIR)/mvtest.Po
+	./$(DEPDIR)/jvntest.Po ./$(DEPDIR)/mvtest.Po \
+	./$(DEPDIR)/mvtest2.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -158,10 +183,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(detest00_SOURCES) $(detest01_SOURCES) $(jvntest_SOURCES) \
-	$(mvtest_SOURCES)
-DIST_SOURCES = $(detest00_SOURCES) $(detest01_SOURCES) \
-	$(jvntest_SOURCES) $(mvtest_SOURCES)
+SOURCES = detest00.c detest01.c jvntest.c mvtest.c mvtest2.c
+DIST_SOURCES = detest00.c detest01.c jvntest.c mvtest.c mvtest2.c
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -185,7 +208,8 @@ am__define_uniq_tagged_files = \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/atlocal.in \
-	$(top_srcdir)/depcomp ChangeLog
+	$(top_srcdir)/build_aux/depcomp \
+	$(top_srcdir)/build_aux/mkinstalldirs ChangeLog
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 ALLOCA = @ALLOCA@
@@ -200,6 +224,7 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CSCOPE = @CSCOPE@
 CTAGS = @CTAGS@
@@ -233,7 +258,6 @@ LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
-MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
@@ -312,20 +336,17 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-mvtest_SOURCES = mvtest.c
-detest00_SOURCES = detest00.c
-detest01_SOURCES = detest01.c
-jvntest_SOURCES = jvntest.c
-CLEANFILES = *.idx *.dat RECOVER
+CLEANFILES = *.idx *.dat RECOVER*
 DISTCLEANFILES = atconfig
 EXTRA_DIST = TESTDATA
-AM_CFLAGS = -I$(top_srcdir) -I$(top_srcdir)/libvbisam
-AM_LDFLAGS = -L$(top_builddir)/libvbisam/.libs -lvbisam
+ISAM_LIB = -lvisam
+AM_CFLAGS = -I$(top_srcdir) -I$(top_srcdir)/libvisam
+AM_LDFLAGS = -L$(top_builddir)/libvisam/.libs $(ISAM_LIB)
 all: all-am
 
 .SUFFIXES:
 .SUFFIXES: .c .lo .o .obj
-$(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__configure_deps)
+$(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
@@ -349,9 +370,9 @@ Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 
-$(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
+$(top_srcdir)/configure:  $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
-$(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
+$(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
 atlocal: $(top_builddir)/config.status $(srcdir)/atlocal.in
@@ -377,6 +398,10 @@ mvtest$(EXEEXT): $(mvtest_OBJECTS) $(mvtest_DEPENDENCIES) $(EXTRA_mvtest_DEPENDE
 	@rm -f mvtest$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(mvtest_OBJECTS) $(mvtest_LDADD) $(LIBS)
 
+mvtest2$(EXEEXT): $(mvtest2_OBJECTS) $(mvtest2_DEPENDENCIES) $(EXTRA_mvtest2_DEPENDENCIES) 
+	@rm -f mvtest2$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(mvtest2_OBJECTS) $(mvtest2_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -387,6 +412,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/detest01.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/jvntest.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mvtest.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mvtest2.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -551,6 +577,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/detest01.Po
 	-rm -f ./$(DEPDIR)/jvntest.Po
 	-rm -f ./$(DEPDIR)/mvtest.Po
+	-rm -f ./$(DEPDIR)/mvtest2.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -600,6 +627,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/detest01.Po
 	-rm -f ./$(DEPDIR)/jvntest.Po
 	-rm -f ./$(DEPDIR)/mvtest.Po
+	-rm -f ./$(DEPDIR)/mvtest2.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

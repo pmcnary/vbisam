@@ -6,6 +6,9 @@
 /* Define to 1 if using 'alloca.c'. */
 #undef C_ALLOCA
 
+/* Can use inline keyword */
+#undef HAS_INLINE
+
 /* Define to 1 if you have 'alloca', as a function or macro. */
 #undef HAVE_ALLOCA
 
@@ -27,6 +30,9 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Define to 1 if you have the <locale.h> header file. */
+#undef HAVE_LOCALE_H
+
 /* Define if you have the 'long long' type. */
 #undef HAVE_LONG_LONG
 
@@ -38,6 +44,18 @@
 
 /* Define to 1 if you have the 'memset' function. */
 #undef HAVE_MEMSET
+
+/* Define to 1 if you have the 'pow' function. */
+#undef HAVE_POW
+
+/* Define to 1 if you have the <pthread.h> header file. */
+#undef HAVE_PTHREAD_H
+
+/* Define to 1 if you have the 'regcomp' function. */
+#undef HAVE_REGCOMP
+
+/* Define to 1 if you have the 'setlocale' function. */
+#undef HAVE_SETLOCALE
 
 /* Define to 1 if you have the <stddef.h> header file. */
 #undef HAVE_STDDEF_H
@@ -59,6 +77,9 @@
 
 /* Define to 1 if you have the 'strdup' function. */
 #undef HAVE_STRDUP
+
+/* Define to 1 if you have the 'strerror' function. */
+#undef HAVE_STRERROR
 
 /* Define to 1 if you have the <strings.h> header file. */
 #undef HAVE_STRINGS_H
@@ -89,6 +110,9 @@
 
 /* Define to 1 if you have the <wchar.h> header file. */
 #undef HAVE_WCHAR_H
+
+/* Can use __THREAD keyword */
+#undef HAVE__THREAD_ATTR
 
 /* ISAM mode 0=C-ISAM compatible, 1=Extended */
 #undef ISAMMODE
@@ -142,6 +166,9 @@
 /* Compile with large file system I/O */
 #undef WITH_LFS64
 
+/* Enable logging/transaction mode */
+#undef WITH_LOGGING
+
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
 #if defined AC_APPLE_UNIVERSAL_BUILD
@@ -164,6 +191,12 @@
 
 /* Define to empty if 'const' does not conform to ANSI C. */
 #undef const
+
+/* Define to '__inline__' or '__inline' if that's what the C compiler
+   calls it, or to nothing if 'inline' is not supported under any name.  */
+#ifndef __cplusplus
+#undef inline
+#endif
 
 /* Define as 'unsigned int' if <stddef.h> doesn't define. */
 #undef size_t

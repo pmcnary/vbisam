@@ -28,22 +28,24 @@
 #include	<limits.h>
 #include        <time.h>
 
-#include        <vbisam.h>
+#include        <visam.h>
 
 #define MAXLEN	256
 #define RECLEN	63
 
-int main (int iargc, char **ppcargv) {
+int
+main (int iargc, char **ppcargv)
+{
 
-	int		iloop=0, ireadcount=0, irecount=0, 
-			iresult=0, ifilehandle,
-			key0, key1;
-	int		i;
-	struct keydesc	skeydesc01, skeydesc02;
-	char		cfilename[] = "detest00";
-	char		line0[21]="_aaaaaaaaaaaaaaaaaaa",
-			line1[38]="_ddddddddddddddddddddddddddddddddddd ";
-	unsigned char	crecord [MAXLEN+128];
+	vb_rtd_t   *vb_rtd = VB_GET_RTD;
+	int         iloop = 0, ireadcount = 0, irecount = 0,
+		iresult = 0, ifilehandle, key0, key1;
+	int         i;
+	struct keydesc skeydesc01, skeydesc02;
+	char        cfilename[] = "detest00";
+	VB_CHAR     line0[21] = "_aaaaaaaaaaaaaaaaaaa",
+		line1[38] = "_ddddddddddddddddddddddddddddddddddd ";
+	VB_UCHAR    crecord[MAXLEN + 128];
 
 	memset (&skeydesc01, 0, sizeof (skeydesc01));
 	skeydesc01.k_flags = ISNODUPS;
@@ -59,57 +61,64 @@ int main (int iargc, char **ppcargv) {
 	skeydesc02.k_leng = 3;
 	skeydesc02.k_type = CHARTYPE;
 
-	if (iargc != 2)  {
-		fprintf (stderr, "Usage: %s : { number of records }\n", ppcargv [0]);
+	if (iargc != 2) {
+		fprintf (stderr, "Usage: %s : { number of records }\n", ppcargv[0]);
 		exit (1);
 	} else {
-		iloop = atoi(ppcargv [1]);
+		iloop = atoi (ppcargv[1]);
 	}
 
-	iserase (cfilename);
+	iserase ((VB_CHAR *) cfilename);
 
-	ifilehandle = isbuild (cfilename, RECLEN, &skeydesc01, ISINOUT + ISFIXLEN + ISEXCLLOCK);
+	printf ("isbuild\n");
+	ifilehandle =
+		isbuild ((VB_CHAR *) cfilename, RECLEN, &skeydesc01,
+				 ISINOUT + ISFIXLEN + ISEXCLLOCK);
 	if (ifilehandle < 0) {
-		printf ("Error opening database: %d\n", iserrno);
+		printf ("Error opening database: %d\n", vb_rtd->iserrno);
 		exit (2);
 	}
 
+	printf ("isaddindex\n");
 	iresult = isaddindex (ifilehandle, &skeydesc02);
 	if (iresult) {
-		printf ("Error adding index 2 to database: %d\n", iserrno);   
+		printf ("Error adding index 2 to database: %d\n", vb_rtd->iserrno);
 		exit (3);
 	}
 
-	for (i = 0; i < iloop; i++)  {
-		key0=i; 
-		key1=1+(int) (9999.0*rand()/(RAND_MAX+1.0)); 
-		sprintf((char *)crecord, "%05i%20s%03i%37s", key0, line0, key1, line1);
-		if (iswrite (ifilehandle, (char *)crecord))  {
-			printf ("Error %d writing row %d to file\n", iserrno, iloop);
+	printf ("writing ");
+	for (i = 0; i < iloop; i++) {
+		key0 = i;
+		key1 = 1 + (int) (9999.0 * rand () / (RAND_MAX + 1.0));
+		sprintf ((char *) crecord, "%03i%20s%03i%37s", key0, line0, key1, line1);
+		if (iswrite (ifilehandle, (VB_CHAR *) crecord)) {
+			printf ("Error %d writing row %d to file\n", vb_rtd->iserrno, iloop);
 			i = iloop;
 		} else {
 			irecount++;
 		}
 	}
 
-	sprintf((char *)crecord, "%03i%20s%03i%37s", 0, line0, 0, line1);
-	iresult = isread (ifilehandle, (char *)crecord, ISFIRST);
+	sprintf ((char *) crecord, "%03i%20s%03i%37s", 0, line0, 0, line1);
+	iresult = isread (ifilehandle, (VB_CHAR *) crecord, ISFIRST);
 	while (iresult == 0) {
 		ireadcount++;
-		crecord [RECLEN + 1] = '\0';
-		fprintf (stdout, "%c%c%c %c%c%c\n",  
-			crecord[23], crecord[24], crecord[25], 
-			crecord[0], crecord[1], crecord[2]);
-		iresult = isread (ifilehandle, (char *)crecord, ISNEXT);
+		crecord[RECLEN + 1] = '\0';
+		fprintf (stdout, "%c%c%c %c%c%c\n",
+				 crecord[23], crecord[24], crecord[25],
+				 crecord[0], crecord[1], crecord[2]);
+		iresult = isread (ifilehandle, (VB_CHAR *) crecord, ISNEXT);
 	}
 
-	if (iserrno != EENDFILE) {
-		fprintf (stderr, "Error : iserrno=%d\n", iserrno);
+	printf ("\n");
+	if (vb_rtd->iserrno != EENDFILE) {
+		fprintf (stderr, "Error : vb_rtd->iserrno=%d\n", vb_rtd->iserrno);
 	}
+	isfullclose (ifilehandle);
 
 	fprintf (stdout, "Audit summary:\n");
 	fprintf (stdout, "Records created : %8d\n", irecount);
 	fprintf (stdout, "Records read    : %8d\n", ireadcount);
-	
+
 	return 0;
 }

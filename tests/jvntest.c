@@ -28,12 +28,12 @@
 #include	<limits.h>
 #include	<float.h>
 
-#include	<vbisam.h>
+#include	<visam.h>
 
 #define	FILE_COUNT	1
 #define	INDX_COUNT	2
 
-static struct	keydesc gskey[10];
+static struct keydesc gskey[10];
 /*
 	gskey [10] =
 	{
@@ -45,15 +45,18 @@ static struct	keydesc gskey[10];
 int
 main (int iargc, char **ppargv)
 {
-	char	cbuffer [1024],
-		cname [32];
-	int	ihandle [10],
-		iloop,
-		iloop1,
-		iresult;
-	FILE	*pshandle;
+	vb_rtd_t   *vb_rtd = VB_GET_RTD;
+	char        cbuffer[1024], cname[32];
+	int         ihandle[10], iloop, iloop1, iresult, icount;
+	FILE       *pshandle;
 
-	memset ((char *)&gskey[0], 0, sizeof (gskey));
+	if (ppargv[1] == NULL)
+		icount = 5;
+	else
+		icount = atoi(ppargv[1]);
+	if (icount <= 0)
+		icount = 5;
+	memset ((VB_CHAR *) & gskey[0], 0, sizeof (gskey));
 	gskey[0].k_flags = ISNODUPS;
 	gskey[0].k_nparts = 1;
 	gskey[0].k_part[0].kp_start = 0;
@@ -64,31 +67,28 @@ main (int iargc, char **ppargv)
 	gskey[1].k_part[0].kp_start = 42;
 	gskey[1].k_part[0].kp_leng = 14;
 	gskey[1].k_part[0].kp_type = 0;
-	for (iloop = 0; iloop < INDX_COUNT; iloop++)
-	{
-		gskey [iloop].k_len = 0;
-		for (iloop1 = 0; iloop1 < gskey [iloop].k_nparts; iloop1++)
-			gskey [iloop].k_len += gskey [iloop].k_part [iloop1].kp_leng;
+	for (iloop = 0; iloop < INDX_COUNT; iloop++) {
+		gskey[iloop].k_len = 0;
+		for (iloop1 = 0; iloop1 < gskey[iloop].k_nparts; iloop1++)
+			gskey[iloop].k_len += gskey[iloop].k_part[iloop1].kp_leng;
 	}
-	for (iloop = 0; iloop < FILE_COUNT; iloop++)
-	{
+	for (iloop = 0; iloop < FILE_COUNT; iloop++) {
 		sprintf (cname, "File%d", iloop);
-		iserase (cname);
-		ihandle [iloop] = isbuild (cname, 170, &gskey [0], ISINOUT + ISEXCLLOCK + ISNOLOG);
-		if (ihandle [iloop] < 0)
-		{
-			printf ("isbuild error %d for %s file\n", iserrno, cname);
+		iserase ((VB_CHAR *) cname);
+		ihandle[iloop] =
+			isbuild ((VB_CHAR *) cname, 170, &gskey[0],
+					 ISINOUT + ISEXCLLOCK + ISNOLOG);
+		if (ihandle[iloop] < 0) {
+			printf ("isbuild error %d for %s file\n", vb_rtd->iserrno, cname);
 			exit (1);
 		}
 	}
-	for (iloop = 0; iloop < FILE_COUNT; iloop++)
-	{
-		for (iloop1 = 1; iloop1 < INDX_COUNT; iloop1++)
-		{
-			iresult = isaddindex (ihandle [iloop], &gskey [iloop1]);
-			if (iresult)
-			{
-				printf ("isaddindex error %d on handle %d index %d\n", iserrno, iloop, iloop1);
+	for (iloop = 0; iloop < FILE_COUNT; iloop++) {
+		for (iloop1 = 1; iloop1 < INDX_COUNT; iloop1++) {
+			iresult = isaddindex (ihandle[iloop], &gskey[iloop1]);
+			if (iresult) {
+				printf ("isaddindex error %d on handle %d index %d\n",
+						vb_rtd->iserrno, iloop, iloop1);
 				exit (1);
 			}
 		}
@@ -97,46 +97,42 @@ main (int iargc, char **ppargv)
 	isclose (ihandle [0]); ihandle [0] = isopen (cname, ISINOUT | ISEXCLLOCK | ISNOLOG);
 */
 	pshandle = fopen ("TESTDATA", "r");
-	if (pshandle == (FILE *) 0)
-	{
+	if (pshandle == (FILE *) 0) {
 		printf ("Error opening source file!\n");
 		exit (1);
 	}
 	iloop1 = 0;
-	while (fgets (cbuffer, 1024, pshandle) != NULL)
-	{
+	while (fgets (cbuffer, 1024, pshandle) != NULL) {
 		if (iloop1 == 0) {
 			printf ("[%-8.8s] [%-14.14s]\n", cbuffer, cbuffer + 42);
 		}
 		iloop1++;
-		cbuffer [170] = 0;
-		for (iloop = 0; iloop < FILE_COUNT; iloop++)
-			if (iswrite (ihandle [iloop], cbuffer))
-			{
-				printf ("Error %d writing row %d to file %d\n", iserrno, iloop1, iloop);
+		cbuffer[170] = 0;
+		for (iloop = 0; iloop < FILE_COUNT; iloop++) {
+			if (iswrite (ihandle[iloop], (VB_CHAR *) cbuffer)) {
+				printf ("Error %d writing row %d to file %d\n", vb_rtd->iserrno,
+						iloop1, iloop);
 				exit (1);
 			}
-			if (iloop1 > atoi (ppargv [1])) {
+			if (iloop1 > icount) {
 				break;
 			}
+		}
 	}
 	fclose (pshandle);
 /*
 	isclose (ihandle [0]); ihandle [0] = isopen (cname, ISINOUT | ISEXCLLOCK);
 */
-	for (iloop = 0; iloop < 2; iloop++)
-	{
-		iresult = isread (ihandle [0], cbuffer, ISFIRST);
-		if (iresult)
-		{
-			printf ("Error on isread - %d\n", iserrno);
+	for (iloop = 0; iloop < 2; iloop++) {
+		iresult = isread (ihandle[0], (VB_CHAR *) cbuffer, ISFIRST);
+		if (iresult) {
+			printf ("Error on isread - %d\n", vb_rtd->iserrno);
 			exit (1);
 		}
 		printf ("[%-8.8s] [%-14.14s]\n", cbuffer, cbuffer + 42);
-		iresult = isdelcurr (ihandle [0]);
-		if (iresult)
-		{
-			printf ("Error on isdelcurr - %d\n", iserrno);
+		iresult = isdelcurr (ihandle[0]);
+		if (iresult) {
+			printf ("Error on isdelcurr - %d\n", vb_rtd->iserrno);
 			exit (1);
 		}
 /*
@@ -144,6 +140,6 @@ main (int iargc, char **ppargv)
 */
 	}
 	for (iloop = 0; iloop < FILE_COUNT; iloop++)
-		isclose (ihandle [iloop]);
+		isclose (ihandle[iloop]);
 	return (0);
 }

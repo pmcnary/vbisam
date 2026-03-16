@@ -1,3 +1,12 @@
+
+2020-12-27  Simon Sobisch <simonsobisch@gnu.org>
+
+	* Makefile.am: cleanup and comments
+	* Makefile.am: depending on CISAM_MODE link to libvbcisam or libvbisam
+
+2020-12-14  Ron Norman <rjn@inglenet.com>
+	* ischeck.c: It will only rebuild if run with '-r' option
+
 2007-11-27  Roger While <simrw@sim-basis.de>
 
 	* 2.0 release. Lots of changes.

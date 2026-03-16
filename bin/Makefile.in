@@ -14,6 +14,28 @@
 
 @SET_MAKE@
 
+#
+# Makefile vbisam/bin
+#
+# Copyright (C) 2007 Roger While
+# Copyright (C) 2020 Simon Sobisch
+# Copyright (C) 2021 Ron Norman 
+#
+# This file is part of VISAM.
+#
+# VISAM is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Lesser General Public License as published
+# by the Free Software Foundation, either version 2.1 of the License,
+# or (at your option) any later version.
+#
+# VISAM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with VISAM.  If not, see <https://www.gnu.org/licenses/>.
+
 VPATH = @srcdir@
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
@@ -90,38 +112,32 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = vbcheck$(EXEEXT) vbrecover$(EXEEXT)
+bin_PROGRAMS = vcheck$(EXEEXT) vrecover$(EXEEXT)
 subdir = bin
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
-	$(top_srcdir)/m4/longlong.m4 $(top_srcdir)/m4/ltoptions.m4 \
-	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 DIST_COMMON = $(srcdir)/Makefile.am $(am__DIST_COMMON)
-mkinstalldirs = $(install_sh) -d
+mkinstalldirs = $(SHELL) $(top_srcdir)/build_aux/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_vbcheck_OBJECTS = vbcheck-vbcheck.$(OBJEXT)
-vbcheck_OBJECTS = $(am_vbcheck_OBJECTS)
-vbcheck_DEPENDENCIES = ../libvbisam/libvbisam.la
+vcheck_SOURCES = vcheck.c
+vcheck_OBJECTS = vcheck.$(OBJEXT)
+vcheck_LDADD = $(LDADD)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-vbcheck_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(vbcheck_CFLAGS) \
-	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-am_vbrecover_OBJECTS = vbrecover-vbrecover.$(OBJEXT)
-vbrecover_OBJECTS = $(am_vbrecover_OBJECTS)
-vbrecover_DEPENDENCIES = ../libvbisam/libvbisam.la
-vbrecover_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(vbrecover_CFLAGS) \
-	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+vrecover_SOURCES = vrecover.c
+vrecover_OBJECTS = vrecover.$(OBJEXT)
+vrecover_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -135,10 +151,9 @@ am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
 am__v_at_1 = 
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
-depcomp = $(SHELL) $(top_srcdir)/depcomp
+depcomp = $(SHELL) $(top_srcdir)/build_aux/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/vbcheck-vbcheck.Po \
-	./$(DEPDIR)/vbrecover-vbrecover.Po
+am__depfiles_remade = ./$(DEPDIR)/vcheck.Po ./$(DEPDIR)/vrecover.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -158,8 +173,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(vbcheck_SOURCES) $(vbrecover_SOURCES)
-DIST_SOURCES = $(vbcheck_SOURCES) $(vbrecover_SOURCES)
+SOURCES = vcheck.c vrecover.c
+DIST_SOURCES = vcheck.c vrecover.c
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -182,8 +197,9 @@ am__define_uniq_tagged_files = \
   unique=`for i in $$list; do \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
-am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/depcomp \
-	ChangeLog
+am__DIST_COMMON = $(srcdir)/Makefile.in \
+	$(top_srcdir)/build_aux/depcomp \
+	$(top_srcdir)/build_aux/mkinstalldirs ChangeLog
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 ALLOCA = @ALLOCA@
@@ -198,6 +214,7 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CSCOPE = @CSCOPE@
 CTAGS = @CTAGS@
@@ -231,7 +248,6 @@ LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
-MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
@@ -310,19 +326,14 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-vbcheck_SOURCES = vbcheck.c
-vbrecover_SOURCES = vbrecover.c
-vbcheck_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir) -I$(top_srcdir)/libvbisam
-vbrecover_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir) -I$(top_srcdir)/libvbisam
-# vbcheck_LDADD = -L$(top_builddir)/libvbisam -lvbisam
-# vbrecover_LDADD = -L$(top_builddir)/libvbisam -lvbisam
-vbcheck_LDADD = ../libvbisam/libvbisam.la
-vbrecover_LDADD = ../libvbisam/libvbisam.la
+ISAM_LIB = -lvisam
+AM_LDFLAGS = -L$(top_builddir)/libvisam $(ISAM_LIB)
+AM_CFLAGS = -I$(top_srcdir) -I$(top_srcdir)/libvisam
 all: all-am
 
 .SUFFIXES:
 .SUFFIXES: .c .lo .o .obj
-$(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__configure_deps)
+$(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
@@ -346,9 +357,9 @@ Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 
-$(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
+$(top_srcdir)/configure:  $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
-$(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
+$(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
 install-binPROGRAMS: $(bin_PROGRAMS)
@@ -396,13 +407,13 @@ clean-binPROGRAMS:
 	$(am__rm_f) $(bin_PROGRAMS)
 	test -z "$(EXEEXT)" || $(am__rm_f) $(bin_PROGRAMS:$(EXEEXT)=)
 
-vbcheck$(EXEEXT): $(vbcheck_OBJECTS) $(vbcheck_DEPENDENCIES) $(EXTRA_vbcheck_DEPENDENCIES) 
-	@rm -f vbcheck$(EXEEXT)
-	$(AM_V_CCLD)$(vbcheck_LINK) $(vbcheck_OBJECTS) $(vbcheck_LDADD) $(LIBS)
+vcheck$(EXEEXT): $(vcheck_OBJECTS) $(vcheck_DEPENDENCIES) $(EXTRA_vcheck_DEPENDENCIES) 
+	@rm -f vcheck$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(vcheck_OBJECTS) $(vcheck_LDADD) $(LIBS)
 
-vbrecover$(EXEEXT): $(vbrecover_OBJECTS) $(vbrecover_DEPENDENCIES) $(EXTRA_vbrecover_DEPENDENCIES) 
-	@rm -f vbrecover$(EXEEXT)
-	$(AM_V_CCLD)$(vbrecover_LINK) $(vbrecover_OBJECTS) $(vbrecover_LDADD) $(LIBS)
+vrecover$(EXEEXT): $(vrecover_OBJECTS) $(vrecover_DEPENDENCIES) $(EXTRA_vrecover_DEPENDENCIES) 
+	@rm -f vrecover$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(vrecover_OBJECTS) $(vrecover_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -410,8 +421,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbcheck-vbcheck.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbrecover-vbrecover.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vcheck.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vrecover.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -439,34 +450,6 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
-
-vbcheck-vbcheck.o: vbcheck.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vbcheck_CFLAGS) $(CFLAGS) -MT vbcheck-vbcheck.o -MD -MP -MF $(DEPDIR)/vbcheck-vbcheck.Tpo -c -o vbcheck-vbcheck.o `test -f 'vbcheck.c' || echo '$(srcdir)/'`vbcheck.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbcheck-vbcheck.Tpo $(DEPDIR)/vbcheck-vbcheck.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='vbcheck.c' object='vbcheck-vbcheck.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vbcheck_CFLAGS) $(CFLAGS) -c -o vbcheck-vbcheck.o `test -f 'vbcheck.c' || echo '$(srcdir)/'`vbcheck.c
-
-vbcheck-vbcheck.obj: vbcheck.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vbcheck_CFLAGS) $(CFLAGS) -MT vbcheck-vbcheck.obj -MD -MP -MF $(DEPDIR)/vbcheck-vbcheck.Tpo -c -o vbcheck-vbcheck.obj `if test -f 'vbcheck.c'; then $(CYGPATH_W) 'vbcheck.c'; else $(CYGPATH_W) '$(srcdir)/vbcheck.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbcheck-vbcheck.Tpo $(DEPDIR)/vbcheck-vbcheck.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='vbcheck.c' object='vbcheck-vbcheck.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vbcheck_CFLAGS) $(CFLAGS) -c -o vbcheck-vbcheck.obj `if test -f 'vbcheck.c'; then $(CYGPATH_W) 'vbcheck.c'; else $(CYGPATH_W) '$(srcdir)/vbcheck.c'; fi`
-
-vbrecover-vbrecover.o: vbrecover.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vbrecover_CFLAGS) $(CFLAGS) -MT vbrecover-vbrecover.o -MD -MP -MF $(DEPDIR)/vbrecover-vbrecover.Tpo -c -o vbrecover-vbrecover.o `test -f 'vbrecover.c' || echo '$(srcdir)/'`vbrecover.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbrecover-vbrecover.Tpo $(DEPDIR)/vbrecover-vbrecover.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='vbrecover.c' object='vbrecover-vbrecover.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vbrecover_CFLAGS) $(CFLAGS) -c -o vbrecover-vbrecover.o `test -f 'vbrecover.c' || echo '$(srcdir)/'`vbrecover.c
-
-vbrecover-vbrecover.obj: vbrecover.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vbrecover_CFLAGS) $(CFLAGS) -MT vbrecover-vbrecover.obj -MD -MP -MF $(DEPDIR)/vbrecover-vbrecover.Tpo -c -o vbrecover-vbrecover.obj `if test -f 'vbrecover.c'; then $(CYGPATH_W) 'vbrecover.c'; else $(CYGPATH_W) '$(srcdir)/vbrecover.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbrecover-vbrecover.Tpo $(DEPDIR)/vbrecover-vbrecover.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='vbrecover.c' object='vbrecover-vbrecover.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vbrecover_CFLAGS) $(CFLAGS) -c -o vbrecover-vbrecover.obj `if test -f 'vbrecover.c'; then $(CYGPATH_W) 'vbrecover.c'; else $(CYGPATH_W) '$(srcdir)/vbrecover.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -600,8 +583,8 @@ clean: clean-am
 clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
 
 distclean: distclean-am
-	-rm -f ./$(DEPDIR)/vbcheck-vbcheck.Po
-	-rm -f ./$(DEPDIR)/vbrecover-vbrecover.Po
+	-rm -f ./$(DEPDIR)/vcheck.Po
+	-rm -f ./$(DEPDIR)/vrecover.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -647,8 +630,8 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -f ./$(DEPDIR)/vbcheck-vbcheck.Po
-	-rm -f ./$(DEPDIR)/vbrecover-vbrecover.Po
+	-rm -f ./$(DEPDIR)/vcheck.Po
+	-rm -f ./$(DEPDIR)/vrecover.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
