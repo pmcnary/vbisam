@@ -198,16 +198,22 @@ iwritebegin (void)
  * Problems:
  *	See comments
  * Comments:
- *	P1-3 FIX: Only release locks on files actually touched during this
- *	transaction (itransyet != 0).  Files with pre-existing record locks
- *	that were not part of the transaction are left intact — prevents
- *	isrollback() / iscommit() from releasing locks the caller still needs.
- *	Limitation: a file locked BEFORE isbegin() AND written during the
- *	transaction will still have its locks released. A full per-row lock
- *	registry would be required to handle that case precisely.
+ *	C-ISAM SPEC: when a transaction completes (iscommit or isrollback),
+ *	ALL held record locks are released on all open files.  Files opened
+ *	with ISEXCLLOCK or locked with islock() are the documented exceptions
+ *	(iisdatalocked guard below).
+ *
+ *	P1-3 OPTION (compile with -DVBISAM_STRICT_TRANS_LOCKS):
+ *	Only release locks on files actually touched during this transaction
+ *	(itransyet != 0).  Pre-existing record locks on untouched files are
+ *	preserved.  This diverges from the C-ISAM spec but prevents rollback
+ *	from releasing locks the caller still holds for another purpose.
+ *	Limitation: a file locked before isbegin() AND written during the
+ *	transaction still loses its locks.  A per-row lock registry would be
+ *	needed to handle that case precisely.
  * Caveat:
  *	Files exclusively opened (ISEXCLLOCK) or locked with islock() remain
- *	locked regardless (iisdatalocked guard below).
+ *	locked regardless of either mode (iisdatalocked guard below).
  */
 static int
 idemotelocks (void)
@@ -227,12 +233,13 @@ idemotelocks (void)
 		if (psvbptr->iisdatalocked) {
 			continue;
 		}
-		/* P1-3 FIX: only release locks on files touched in this transaction.
-		 * itransyet == 0 means no write/lock occurred during isbegin()..now,
-		 * so pre-existing record locks on this file are left in place. */
+#if defined(VBISAM_STRICT_TRANS_LOCKS)
+		/* Non-standard: preserve locks on files not touched this transaction.
+		 * Diverges from C-ISAM spec — see idemotelocks() comment above. */
 		if (psvbptr->itransyet == 0) {
 			continue;
 		}
+#endif
 		if (ivbdatalock (ihandle, VBUNLOCK, (off_t) 0)) {
 			iresult = -1;
 		}
