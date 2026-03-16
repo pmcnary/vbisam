@@ -198,14 +198,16 @@ iwritebegin (void)
  * Problems:
  *	See comments
  * Comments:
- *	When a transaction is completed, either with an iscommit() or an
- *	isrollback (), *ALL* held locks are released.  I'm not quite sure how
- *	valid this really is...  Perhaps only the 'transactional' locks should
- *	be released?  Or perhaps they should be retained, but demoted to a
- *	non-transactional status?  Oh well... C'est la vie!
+ *	P1-3 FIX: Only release locks on files actually touched during this
+ *	transaction (itransyet != 0).  Files with pre-existing record locks
+ *	that were not part of the transaction are left intact — prevents
+ *	isrollback() / iscommit() from releasing locks the caller still needs.
+ *	Limitation: a file locked BEFORE isbegin() AND written during the
+ *	transaction will still have its locks released. A full per-row lock
+ *	registry would be required to handle that case precisely.
  * Caveat:
- *	If the file is exclusively opened (ISEXCLLOCK) or has been locked with
- *	an islock () call, these locks remain in place!
+ *	Files exclusively opened (ISEXCLLOCK) or locked with islock() remain
+ *	locked regardless (iisdatalocked guard below).
  */
 static int
 idemotelocks (void)
@@ -225,8 +227,13 @@ idemotelocks (void)
 		if (psvbptr->iisdatalocked) {
 			continue;
 		}
-		/* Rather a carte-blanche method huh? */
-		if (ivbdatalock (ihandle, VBUNLOCK, (off_t) 0)) {	/* BUG Only ours? */
+		/* P1-3 FIX: only release locks on files touched in this transaction.
+		 * itransyet == 0 means no write/lock occurred during isbegin()..now,
+		 * so pre-existing record locks on this file are left in place. */
+		if (psvbptr->itransyet == 0) {
+			continue;
+		}
+		if (ivbdatalock (ihandle, VBUNLOCK, (off_t) 0)) {
 			iresult = -1;
 		}
 	}
@@ -350,10 +357,38 @@ ivbrollmeback (off_t toffset, const int iinrecover)
 			if (ilocalhandle[ihandle] == -1) {
 				return EBADFILE;
 			}
-			vb_rtd->isreclen = inl_ldint (pcbuffer + INTSIZE + QUADSIZ8);
-			pcrow = pcbuffer + INTSIZE + QUADSIZ8 + INTSIZE + INTSIZE;
-			if (isrewrec (ilocalhandle[ihandle], trownumber, pcrow)) {
-				return vb_rtd->iserrno;
+			{
+				/* P1-4: Row verification before revert.
+				 * Log layout (from ivbtransupdate):
+				 *   [ihandle:INT][trownumber:QUAD][ioldrowlen:INT][inewrowlen:INT]
+				 *   [old row bytes][new row bytes]
+				 * Before writing back the old row, confirm the on-disk row
+				 * still matches the "new" row we wrote during the transaction.
+				 * A mismatch means another writer touched this row after our
+				 * transaction committed its write — we cannot safely revert. */
+				int ioldrowlen = inl_ldint (pcbuffer + INTSIZE + QUADSIZ8);
+				int inewrowlen = inl_ldint (pcbuffer + INTSIZE + QUADSIZ8 + INTSIZE);
+				VB_CHAR *pcoldrow = pcbuffer + INTSIZE + QUADSIZ8 + INTSIZE + INTSIZE;
+				VB_CHAR *pcnewrow = pcoldrow + ioldrowlen;
+				int ideleted = 0;
+				VB_CHAR *cvbverify = malloc ((size_t)(inewrowlen + 1));
+				if (!cvbverify) {
+					return EBADFILE;
+				}
+				if (ivbdataread (ilocalhandle[ihandle], cvbverify, &ideleted, trownumber)
+					|| ideleted
+					|| memcmp (cvbverify, pcnewrow, (size_t)inewrowlen)) {
+					/* Tampered or unreadable — skip this revert, flag corruption */
+					free (cvbverify);
+					ierrorencountered = EBADFILE;
+				} else {
+					free (cvbverify);
+					vb_rtd->isreclen = ioldrowlen;
+					pcrow = pcoldrow;
+					if (isrewrec (ilocalhandle[ihandle], trownumber, pcrow)) {
+						return vb_rtd->iserrno;
+					}
+				}
 			}
 		}
 		if (!memcmp (vb_rtd->psvblogheader->coperation, VBL_DELETE, 2)) {
