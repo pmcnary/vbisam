@@ -82,8 +82,14 @@ vtranshdr (const VB_CHAR * pctranstype)
 	vinitpiduid ();
 	vb_rtd->psvblogheader = (struct SLOGHDR *) vb_rtd->cvbtransbuffer;
 	memcpy (vb_rtd->psvblogheader->coperation, pctranstype, 2);
-	inl_stint ((int) vb_rtd->tvbpid, vb_rtd->psvblogheader->cpid);	/* Assumes pid_t is short */
-	inl_stint ((int) vb_rtd->tvbuid, vb_rtd->psvblogheader->cuid);	/* Assumes uid_t is short */
+	/* cpid/cuid are INTSIZE (2 bytes): truncate PID/UID to 16 bits.
+	 * P1-5 FIX: on modern Linux pid_t is 32-bit and PIDs commonly exceed
+	 * 32767.  The full PID must be masked the same way in vtranshdr() AND
+	 * in every comparison site (ivbrollmeback, ivbrollmeforward) or the
+	 * rollback engine can never match its own log entries — see tvbpid
+	 * masking below and at the comparison sites. */
+	inl_stint ((int)(vb_rtd->tvbpid & 0xFFFF), vb_rtd->psvblogheader->cpid);
+	inl_stint ((int)(vb_rtd->tvbuid & 0xFFFF), vb_rtd->psvblogheader->cuid);
 	inl_stlong (time (NULL), vb_rtd->psvblogheader->ctime);	/* Assumes time_t is long */
 	inl_stint (0, vb_rtd->psvblogheader->crfu1);	/* BUG - WTF is this? */
 }
@@ -332,8 +338,8 @@ ivbrollmeback (off_t toffset, const int iinrecover)
 				return EBADFILE;
 			}
 		}
-		/* Is it OURS? */
-		if (inl_ldint (vb_rtd->psvblogheader->cpid) != vb_rtd->tvbpid) {
+		/* Is it OURS? (P1-5: compare lower 16 bits — cpid field is INTSIZE) */
+		if (inl_ldint (vb_rtd->psvblogheader->cpid) != (int)(vb_rtd->tvbpid & 0xFFFF)) {
 			continue;
 		}
 		if (!memcmp (vb_rtd->psvblogheader->coperation, VBL_BEGIN, 2)) {
@@ -374,8 +380,11 @@ ivbrollmeback (off_t toffset, const int iinrecover)
 				 * A mismatch means another writer touched this row after our
 				 * transaction committed its write — we cannot safely revert. */
 				int ioldrowlen = inl_ldint (pcbuffer + INTSIZE + QUADSIZ8);
+#ifdef VBISAM_VERIFY_ROLLBACK
 				int inewrowlen = inl_ldint (pcbuffer + INTSIZE + QUADSIZ8 + INTSIZE);
+#endif
 				VB_CHAR *pcoldrow = pcbuffer + INTSIZE + QUADSIZ8 + INTSIZE + INTSIZE;
+#ifdef VBISAM_VERIFY_ROLLBACK
 				VB_CHAR *pcnewrow = pcoldrow + ioldrowlen;
 				int ideleted = 0;
 				VB_CHAR *cvbverify = malloc ((size_t)(inewrowlen + 1));
@@ -390,12 +399,15 @@ ivbrollmeback (off_t toffset, const int iinrecover)
 					ierrorencountered = EBADFILE;
 				} else {
 					free (cvbverify);
+#endif
 					vb_rtd->isreclen = ioldrowlen;
 					pcrow = pcoldrow;
 					if (isrewrec (ilocalhandle[ihandle], trownumber, pcrow)) {
 						return vb_rtd->iserrno;
 					}
+#ifdef VBISAM_VERIFY_ROLLBACK
 				}
+#endif
 			}
 		}
 		if (!memcmp (vb_rtd->psvblogheader->coperation, VBL_DELETE, 2)) {
@@ -520,7 +532,7 @@ ivbrollmeforward (off_t toffset)
 			}
 		}
 		/* Is it OURS? */
-		if (inl_ldint (vb_rtd->psvblogheader->cpid) != vb_rtd->tvbpid) {
+		if (inl_ldint (vb_rtd->psvblogheader->cpid) != (int)(vb_rtd->tvbpid & 0xFFFF)) {
 			continue;
 		}
 		if (!memcmp (vb_rtd->psvblogheader->coperation, VBL_BEGIN, 2)) {

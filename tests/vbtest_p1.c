@@ -14,6 +14,13 @@
  * Output: TAP-compatible (ok N / not ok N / SKIP N).
  */
 
+/* config.h must come first — it defines WITH_LOGGING, WITH_LFS64, etc.
+ * The build system passes -DHAVE_CONFIG_H and -I$(top_builddir) so that
+ * this include resolves to the correct config.h for this build. */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -282,6 +289,7 @@ test_p1_4_update_rollback (void)
 	k1.k_leng   = 5;
 	k1.k_type   = CHARTYPE;
 
+	/* Phase 1: build file and write initial record (no transaction yet) */
 	h = isbuild ((VB_CHAR *) fname, RECLEN, &k1,
 	             ISINOUT + ISFIXLEN + ISEXCLLOCK);
 	if (h < 0) {
@@ -289,27 +297,34 @@ test_p1_4_update_rollback (void)
 		TAP_FAIL ("P1-4 setup: isbuild");
 		return;
 	}
-
-	/* Write original record */
 	make_rec (orig, 77777, 0);
 	if (iswrite (h, (VB_CHAR *) orig)) {
 		TAP_FAIL ("P1-4 setup: iswrite");
 		isclose (h); iserase ((VB_CHAR *) fname);
 		return;
 	}
+	isclose (h);
 
-	/* Open transaction log, begin transaction */
+	/* Phase 2: set up transaction log, reopen with ISTRANS */
 	rc = open (logname, O_CREAT | O_TRUNC | O_RDWR, 0666);
-	if (rc < 0) { TAP_FAIL ("P1-4 setup: log open"); isclose(h); return; }
+	if (rc < 0) { TAP_FAIL ("P1-4 setup: log open"); return; }
 	close (rc);
 	if (islogopen ((VB_CHAR *) logname)) {
 		TAP_DIAG ("P1-4 islogopen failed iserrno=%d\n", vb_rtd->iserrno);
 		TAP_FAIL ("P1-4 setup: islogopen");
-		isclose (h); iserase ((VB_CHAR *) fname); unlink (logname);
+		iserase ((VB_CHAR *) fname); unlink (logname);
 		return;
 	}
 
+	/* isbegin BEFORE isopen — file must see ISTRANS for writes to be logged */
 	isbegin ();
+	h = isopen ((VB_CHAR *) fname, ISINOUT + ISFIXLEN + ISTRANS + ISMANULOCK);
+	if (h < 0) {
+		TAP_DIAG ("P1-4 isopen ISTRANS failed iserrno=%d\n", vb_rtd->iserrno);
+		TAP_FAIL ("P1-4 setup: isopen with ISTRANS");
+		isrollback (); islogclose (); iserase ((VB_CHAR *) fname); unlink (logname);
+		return;
+	}
 
 	/* Read and rewrite with different content */
 	memcpy (rbuf, orig, RECLEN);
@@ -326,15 +341,29 @@ test_p1_4_update_rollback (void)
 		TAP_FAIL ("P1-4a: isrollback failed after clean UPDATE");
 	}
 
-	/* Record must be restored to original content */
-	memcpy (rbuf, orig, RECLEN);
-	rc = isread (h, (VB_CHAR *) rbuf, ISEQUAL);
-	if (rc == 0 && memcmp (rbuf, orig, RECLEN) == 0)
-		TAP_OK ("P1-4b: record restored to original content after rollback");
-	else {
-		TAP_DIAG ("P1-4b: rc=%d iserrno=%d content_match=%d\n",
-		           rc, vb_rtd->iserrno, memcmp(rbuf,orig,RECLEN)==0);
+	/* Record must be restored to original content.
+	 * After rollback, file handle h may have stale index state.
+	 * Close and reopen the file without ISTRANS to read cleanly. */
+	isclose (h);
+	h = isopen ((VB_CHAR *) fname, ISINPUT + ISFIXLEN + ISMANULOCK);
+	if (h < 0) {
+		TAP_DIAG ("P1-4b: reopen for verification failed iserrno=%d\n",
+		           vb_rtd->iserrno);
 		TAP_FAIL ("P1-4b: record NOT restored after rollback");
+	} else {
+		memcpy (rbuf, orig, RECLEN);
+		rc = isread (h, (VB_CHAR *) rbuf, ISEQUAL);
+		if (rc == 0 && memcmp (rbuf, orig, RECLEN) == 0)
+			TAP_OK ("P1-4b: record restored to original content after rollback");
+		else {
+			TAP_DIAG ("P1-4b: rc=%d iserrno=%d\n", rc, vb_rtd->iserrno);
+			if (rc == 0) {
+				TAP_DIAG ("P1-4b: got   [%.5s|%.5s]\n", rbuf, rbuf+6);
+				TAP_DIAG ("P1-4b: want  [%.5s|%.5s]\n", orig, orig+6);
+			}
+			TAP_FAIL ("P1-4b: record NOT restored after rollback");
+		}
+		isclose (h);
 	}
 
 	islogclose ();

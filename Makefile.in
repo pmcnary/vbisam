@@ -19,7 +19,7 @@
 #
 # Copyright (C) 2007 Roger While
 # Copyright (C) 2020 Simon Sobisch
-# Copyright (C) 2021 Ron Norman 
+# Copyright (C) 2021 Ron Norman
 #
 # This file was part of VBISAM.
 #
@@ -225,8 +225,8 @@ am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/config.h.in \
 	$(top_srcdir)/build_aux/pre-inst-env.in AUTHORS COPYING \
 	COPYING.LIB ChangeLog INSTALL NEWS README build_aux/ChangeLog \
 	build_aux/compile build_aux/config.guess build_aux/config.sub \
-	build_aux/install-sh build_aux/ltmain.sh build_aux/mdate-sh \
-	build_aux/missing build_aux/mkinstalldirs
+	build_aux/depcomp build_aux/install-sh build_aux/ltmain.sh \
+	build_aux/mdate-sh build_aux/missing build_aux/mkinstalldirs
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -402,8 +402,8 @@ top_srcdir = @top_srcdir@
 SUBDIRS = libvisam bin tests
 ACLOCAL_AMFLAGS = -I m4
 pkginclude_HEADERS = vdecimal.h visam.h visam_rename.h
-EXTRA_DIST = cpucheck.c libvisam/iscommon.c 
-dist_noinst_SCRIPTS = autogen.sh build_aux/bootstrap
+EXTRA_DIST = cpucheck.c libvisam/iscommon.c
+dist_noinst_SCRIPTS = build_aux/bootstrap
 
 # files shipped with the package that should be 755'ed:
 FILES_TO_BE_EXECUTABLE = $(dist_noinst_SCRIPTS) \
