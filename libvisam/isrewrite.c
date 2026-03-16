@@ -22,6 +22,11 @@
 
 /* Local functions */
 
+/* Key mutation states for rollback tracking (P1-1 fix) */
+#define KEY_UNCHANGED  0   /* key not modified — no rollback needed     */
+#define KEY_DELETED    1   /* old key removed, new key NOT yet inserted */
+#define KEY_UPDATED    2   /* old key removed, new key inserted         */
+
 static int
 irowupdate (const int ihandle, VB_CHAR * pcrow, off_t trownumber)
 {
@@ -33,6 +38,9 @@ irowupdate (const int ihandle, VB_CHAR * pcrow, off_t trownumber)
 	int         ikeynumber, iresult;
 	char        keypresent[64];
 	VB_UCHAR    ckeyvalue[VB_MAX_KEYLEN];
+	/* P1-1: track mutation state of each index for correct rollback */
+	int         ikeystate[MAXSUBS];
+	memset (ikeystate, KEY_UNCHANGED, sizeof (ikeystate));
 
 	psvbfptr = vb_rtd->psvbfile[ihandle];
 	/*
@@ -105,17 +113,36 @@ irowupdate (const int ihandle, VB_CHAR * pcrow, off_t trownumber)
 				continue;
 			}
 			if (iresult) {
-				/* Eeek, an error occured.  Let's put back what we removed! */
-				while (ikeynumber >= 0) {
-					/* BUG - We need to do SOMETHING sane here? Dunno WHAT */
-					ivbkeyinsert (ihandle, NULL, ikeynumber, ckeyvalue,
-								  trownumber, tdupnumber, NULL);
-					ikeynumber--;
-					vvbmakekey (pskeyptr, psvbfptr->ppcrowbuffer, ckeyvalue);
+				/*
+				 * P1-1 FIX: ivbkeydelete failed for ikeynumber.
+				 * That index's old key is still present — do not touch it.
+				 * For every index already in KEY_UPDATED state (old removed,
+				 * new inserted), reverse the operation: delete the new key
+				 * and re-insert the original key from ppcrowbuffer.
+				 */
+				int irestore;
+				VB_UCHAR coldkey[VB_MAX_KEYLEN];
+				for (irestore = 0; irestore < ikeynumber; irestore++) {
+					if (ikeystate[irestore] != KEY_UPDATED) {
+						continue;
+					}
+					struct keydesc *psrkey = psvbfptr->pskeydesc[irestore];
+					/* Remove the new key we just inserted */
+					vvbmakekey (psrkey, pcrow, ckeyvalue);
+					ivbkeydelete (ihandle, irestore);
+					/* Re-insert the original key */
+					vvbmakekey (psrkey, psvbfptr->ppcrowbuffer, coldkey);
+					ivbkeysearch (ihandle, ISGTEQ, irestore, 0, coldkey, (off_t) 0);
+					ivbkeyinsert (ihandle, NULL, irestore, coldkey,
+								  trownumber,
+								  psvbfptr->pskeycurr[irestore]->tdupnumber,
+								  NULL);
+					ikeystate[irestore] = KEY_UNCHANGED;
 				}
 				vb_rtd->iserrno = EBADFILE;
 				return -1;
 			}
+			ikeystate[ikeynumber] = KEY_DELETED;
 			iresult =
 				ivbkeysearch (ihandle, ISGREAT, ikeynumber, 0, ckeyvalue, (off_t) 0);
 		}
@@ -140,13 +167,37 @@ irowupdate (const int ihandle, VB_CHAR * pcrow, off_t trownumber)
 			iresult = ivbkeyinsert (ihandle, NULL, ikeynumber, ckeyvalue,
 									trownumber, tdupnumber, NULL);
 		}
+		ikeystate[ikeynumber] = KEY_UPDATED;
 		if (iresult) {
-			/* Eeek, an error occured.  Let's remove what we added */
-			while (ikeynumber >= 0) {
-/* BUG - This is WRONG, we should re-establish what we had before! */
-				/* ivbkeydelete (ihandle, ikeynumber); */
-				ikeynumber--;
+			/*
+			 * P1-1 FIX: ivbkeyinsert failed for ikeynumber.
+			 * ikeystate[ikeynumber] = KEY_DELETED (old removed, new not added).
+			 * All indexes 0..ikeynumber-1 marked KEY_UPDATED need reversal:
+			 * delete the new key, re-insert the original from ppcrowbuffer.
+			 * For ikeynumber itself: only re-insert old (new was never added).
+			 */
+			int irestore;
+			VB_UCHAR coldkey[VB_MAX_KEYLEN];
+			for (irestore = 0; irestore <= ikeynumber; irestore++) {
+				if (ikeystate[irestore] == KEY_UNCHANGED) {
+					continue;
+				}
+				struct keydesc *psrkey = psvbfptr->pskeydesc[irestore];
+				if (ikeystate[irestore] == KEY_UPDATED) {
+					/* Remove the new key we successfully inserted */
+					vvbmakekey (psrkey, pcrow, ckeyvalue);
+					ivbkeydelete (ihandle, irestore);
+				}
+				/* Re-insert the original key from the saved row buffer */
+				vvbmakekey (psrkey, psvbfptr->ppcrowbuffer, coldkey);
+				ivbkeysearch (ihandle, ISGTEQ, irestore, 0, coldkey, (off_t) 0);
+				ivbkeyinsert (ihandle, NULL, irestore, coldkey,
+							  trownumber,
+							  psvbfptr->pskeycurr[irestore]->tdupnumber,
+							  NULL);
+				ikeystate[irestore] = KEY_UNCHANGED;
 			}
+			vb_rtd->iserrno = EBADFILE;
 			return iresult;
 		}
 	}

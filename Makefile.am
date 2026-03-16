@@ -3,7 +3,7 @@
 #
 # Copyright (C) 2007 Roger While
 # Copyright (C) 2020 Simon Sobisch
-# Copyright (C) 2021 Ron Norman 
+# Copyright (C) 2021 Ron Norman
 #
 # This file was part of VBISAM.
 #
@@ -28,9 +28,9 @@ ACLOCAL_AMFLAGS = -I m4
 pkgincludedir = $(includedir)
 pkginclude_HEADERS = vdecimal.h visam.h visam_rename.h
 
-EXTRA_DIST= cpucheck.c libvisam/iscommon.c 
+EXTRA_DIST= cpucheck.c libvisam/iscommon.c
 
-dist_noinst_SCRIPTS = autogen.sh build_aux/bootstrap
+dist_noinst_SCRIPTS = build_aux/bootstrap
 
 # files shipped with the package that should be 755'ed:
 FILES_TO_BE_EXECUTABLE = $(dist_noinst_SCRIPTS) \
