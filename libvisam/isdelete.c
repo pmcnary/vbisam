@@ -124,6 +124,11 @@ iprocessdelete (const int ihandle, off_t trownumber)
 #if (VBLOGGING == 1)
 	ivbtransdelete (ihandle, trownumber, vb_rtd->isreclen);	/* BUG - retval */
 #endif
+	/* Audit trail — log the deleted row (row data is in ppcrowbuffer) */
+	if (psvbfptr->iauditactive) {
+		ivbauditrecord (ihandle, "dd", trownumber,
+						psvbfptr->ppcrowbuffer, vb_rtd->isreclen);
+	}
 	return 0;
 }
 

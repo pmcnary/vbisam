@@ -323,6 +323,14 @@ vvbfreedict (struct DICTINFO *psfile)
 	if (psfile->pdictbuf) {
 		free (psfile->pdictbuf);
 	}
+	if (psfile->iaudithandle != -1) {
+		close (psfile->iaudithandle);
+		psfile->iaudithandle = -1;
+	}
+	if (psfile->pcauditfilename) {
+		free (psfile->pcauditfilename);
+		psfile->pcauditfilename = NULL;
+	}
 	vvbfree (psfile, sizeof (struct DICTINFO));
 }
 

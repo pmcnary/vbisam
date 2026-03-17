@@ -663,7 +663,10 @@ struct DICTINFO {
 	/* 0: FO Trans not yet written */
 	/* 1: FO Trans written outside isbegin */
 	/* 2: FO Trans written within isbegin */
-	VB_UCHAR    dspare2[3];		/* spare (to complete 8 bytes) */
+	VB_UCHAR    iauditactive;	/* 0: no audit, 1: audit trail active */
+	VB_UCHAR    dspare2[2];		/* spare (to complete 8 bytes) */
+	int         iaudithandle;	/* fd of audit trail file (-1 = none) */
+	VB_CHAR    *pcauditfilename;	/* audit trail filename (malloc'd) */
 	/****************************************************
 	 * Following are a copy of the data in the dictionary node
 	 * but in normal C variable format
@@ -752,6 +755,11 @@ VB_HIDDEN extern int ivbtranssetunique (int ihandle, off_t tuniqueid);
 VB_HIDDEN extern int ivbtransuniqueid (int ihandle, off_t tuniqueid);
 VB_HIDDEN extern int ivbtransupdate (int ihandle, off_t trownumber, int ioldrowlen,
 									 int inewrowlen, VB_CHAR * pcrow);
+
+/* isaudit.c */
+VB_HIDDEN extern int ivbauditrecord (const int ihandle, const VB_CHAR *pctype,
+									  off_t trownumber, const VB_CHAR *pcrow,
+									  int irowlength);
 
 /* iswrite.c */
 VB_HIDDEN extern int ivbwriterow (const int ihandle, VB_CHAR * pcrow,

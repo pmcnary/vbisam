@@ -30,7 +30,8 @@ TESTS          = vbtest_p1
 
 CLEANFILES = *.idx *.dat RECOVER* vbtp1_rw.idx vbtp1_rw.dat \
              vbtp1_del.idx vbtp1_del.dat \
-             vbtp1_p4.idx vbtp1_p4.dat vbtp1_p4.log
+             vbtp1_p4.idx vbtp1_p4.dat vbtp1_p4.log \
+             vbtp1_aud.idx vbtp1_aud.dat vbtp1_aud.audit
 DISTCLEANFILES = atconfig
 EXTRA_DIST = TESTDATA
 

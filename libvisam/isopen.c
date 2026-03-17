@@ -400,6 +400,9 @@ isopen (const VB_CHAR * pcfilename, int imode)
 	}
 	psfile->idatahandle = -1;
 	psfile->iindexhandle = -1;
+	psfile->iaudithandle = -1;
+	psfile->iauditactive = 0;
+	psfile->pcauditfilename = NULL;
 	sprintf ((char *) tmpfname, "%s.idx", pcfilename);
 	if (stat ((char *) tmpfname, &sstat)) {
 		errno = ENOENT;

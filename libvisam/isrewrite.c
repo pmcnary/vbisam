@@ -215,9 +215,7 @@ isrewrite (int ihandle, VB_CHAR * pcrow)
 	struct DICTINFO *psvbfptr;
 	off_t       trownumber;
 	int         ideleted, inewreclen, iresult = 0;
-#if (VBLOGGING == 1)
 	int         ioldreclen = 0;
-#endif
 	VB_UCHAR    ckeyvalue[VB_MAX_KEYLEN];
 
 	if (ivbenter (ihandle, 1)) {
@@ -259,10 +257,8 @@ isrewrite (int ihandle, VB_CHAR * pcrow)
 			}
 			if (vb_rtd->iserrno) {
 				iresult = -1;
-#if (VBLOGGING == 1)
 			} else {
 				ioldreclen = vb_rtd->isreclen;
-#endif
 			}
 
 			if (!iresult) {
@@ -289,6 +285,17 @@ isrewrite (int ihandle, VB_CHAR * pcrow)
 				}
 			}
 #endif
+			/* Audit trail — old image then new image */
+			if (!iresult && psvbfptr->iauditactive) {
+				int iaudold = (psvbfptr->iopenmode & ISVARLEN)
+					? ioldreclen : psvbfptr->iminrowlength;
+				int iaudnew = (psvbfptr->iopenmode & ISVARLEN)
+					? inewreclen : psvbfptr->iminrowlength;
+				ivbauditrecord (ihandle, "rr", trownumber,
+								psvbfptr->ppcrowbuffer, iaudold);
+				ivbauditrecord (ihandle, "ww", trownumber,
+								pcrow, iaudnew);
+			}
 			break;
 
 		case 0:					   /* LESS than */
@@ -316,9 +323,7 @@ isrewcurr (int ihandle, VB_CHAR * pcrow)
 	vb_rtd_t   *vb_rtd = VB_GET_RTD;
 	struct DICTINFO *psvbfptr;
 	int         ideleted, inewreclen, iresult = 0;
-#if (VBLOGGING == 1)
 	int         ioldreclen = 0;
-#endif
 
 	if (ivbenter (ihandle, 1)) {
 		return -1;
@@ -348,10 +353,8 @@ isrewcurr (int ihandle, VB_CHAR * pcrow)
 						 psvbfptr->trownumber);
 		if (!vb_rtd->iserrno && ideleted) {
 			vb_rtd->iserrno = ENOREC;
-#if (VBLOGGING == 1)
 		} else {
 			ioldreclen = vb_rtd->isreclen;
-#endif
 		}
 		if (vb_rtd->iserrno) {
 			iresult = -1;
@@ -379,6 +382,17 @@ isrewcurr (int ihandle, VB_CHAR * pcrow)
 			}
 		}
 #endif
+		/* Audit trail — old image then new image */
+		if (!iresult && psvbfptr->iauditactive) {
+			int iaudold = (psvbfptr->iopenmode & ISVARLEN)
+				? ioldreclen : psvbfptr->iminrowlength;
+			int iaudnew = (psvbfptr->iopenmode & ISVARLEN)
+				? inewreclen : psvbfptr->iminrowlength;
+			ivbauditrecord (ihandle, "rr", psvbfptr->trownumber,
+							psvbfptr->ppcrowbuffer, iaudold);
+			ivbauditrecord (ihandle, "ww", psvbfptr->trownumber,
+							pcrow, iaudnew);
+		}
 	}
   isrewcurr_exit:
 	psvbfptr->iisdictlocked |= 0x02;
@@ -392,9 +406,7 @@ isrewrec (int ihandle, vbisam_rec_n trownumber, VB_CHAR * pcrow)
 	vb_rtd_t   *vb_rtd = VB_GET_RTD;
 	struct DICTINFO *psvbfptr;
 	int         ideleted, inewreclen, iresult = 0;
-#if (VBLOGGING == 1)
 	int         ioldreclen = 0;
-#endif
 
 	if (ivbenter (ihandle, 1)) {
 		return -1;
@@ -430,10 +442,8 @@ isrewrec (int ihandle, vbisam_rec_n trownumber, VB_CHAR * pcrow)
 		}
 		if (vb_rtd->iserrno) {
 			iresult = -1;
-#if (VBLOGGING == 1)
 		} else {
 			ioldreclen = vb_rtd->isreclen;
-#endif
 		}
 		if (!iresult) {
 			iresult = irowupdate (ihandle, pcrow, trownumber);
@@ -456,6 +466,17 @@ isrewrec (int ihandle, vbisam_rec_n trownumber, VB_CHAR * pcrow)
 			}
 		}
 #endif
+		/* Audit trail — old image then new image */
+		if (!iresult && psvbfptr->iauditactive) {
+			int iaudold = (psvbfptr->iopenmode & ISVARLEN)
+				? ioldreclen : psvbfptr->iminrowlength;
+			int iaudnew = (psvbfptr->iopenmode & ISVARLEN)
+				? inewreclen : psvbfptr->iminrowlength;
+			ivbauditrecord (ihandle, "rr", trownumber,
+							psvbfptr->ppcrowbuffer, iaudold);
+			ivbauditrecord (ihandle, "ww", trownumber,
+							pcrow, iaudnew);
+		}
 	}
   isrewrec_exit:
 	if (!iresult) {

@@ -120,6 +120,12 @@ ivbwriterow (const int ihandle, VB_CHAR * pcrow, off_t trownumber)
 									  psvbfptr->iminrowlength, pcrow);
 		}
 #endif
+		/* Audit trail — log the inserted row */
+		if (!iresult && psvbfptr->iauditactive) {
+			int iaudlen = (psvbfptr->iopenmode & ISVARLEN)
+				? vb_rtd->isreclen : psvbfptr->iminrowlength;
+			ivbauditrecord (ihandle, "aa", trownumber, pcrow, iaudlen);
+		}
 	}
 	return iresult;
 }

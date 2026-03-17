@@ -375,13 +375,191 @@ test_p1_4_update_rollback (void)
 #endif /* WITH_LOGGING */
 
 /* ------------------------------------------------------------------ */
+/* P1-5: isaudit() audit trail                                          */
+/* Exercises AUDSETNAME, AUDSTART, INSERT/DELETE/REWRITE, AUDSTOP,     */
+/* AUDINFO, AUDGETNAME. Reads audit file and verifies record headers.  */
+/* ------------------------------------------------------------------ */
+static void
+test_p1_5_audit_trail (void)
+{
+	vb_rtd_t   *vb_rtd = VB_GET_RTD;
+	char        rbuf[RECLEN + 1];
+	struct keydesc k1;
+	int         h, rc;
+	const char *fname = "vbtp1_aud";
+	const char *aname = "vbtp1_aud.audit";
+	struct stat st;
+
+	iserase ((VB_CHAR *) fname);
+	unlink (aname);
+
+	memset (&k1, 0, sizeof k1);
+	k1.k_flags  = ISNODUPS;
+	k1.k_nparts = 1;
+	k1.k_start  = 0;
+	k1.k_leng   = 5;
+	k1.k_type   = CHARTYPE;
+
+	h = isbuild ((VB_CHAR *) fname, RECLEN, &k1,
+	             ISINOUT + ISFIXLEN + ISEXCLLOCK);
+	if (h < 0) {
+		TAP_DIAG ("P1-5 isbuild failed iserrno=%d\n", vb_rtd->iserrno);
+		TAP_FAIL ("P1-5 setup: isbuild");
+		return;
+	}
+
+	/* AUDSETNAME */
+	rc = isaudit (h, (VB_CHAR *) aname, AUDSETNAME);
+	if (rc != 0) {
+		TAP_FAIL ("P1-5a: AUDSETNAME failed");
+		isclose (h); iserase ((VB_CHAR *) fname);
+		return;
+	}
+
+	/* AUDGETNAME */
+	char gotname[256];
+	memset (gotname, 0, sizeof gotname);
+	rc = isaudit (h, (VB_CHAR *) gotname, AUDGETNAME);
+	if (rc == 0 && strcmp (gotname, aname) == 0)
+		TAP_OK ("P1-5a: AUDSETNAME/AUDGETNAME round-trip");
+	else {
+		TAP_DIAG ("P1-5a: got '%s' expected '%s'\n", gotname, aname);
+		TAP_FAIL ("P1-5a: AUDGETNAME mismatch");
+	}
+
+	/* AUDINFO before start — should return 0 */
+	rc = isaudit (h, NULL, AUDINFO);
+	if (rc == 0)
+		TAP_OK ("P1-5b: AUDINFO returns 0 before AUDSTART");
+	else
+		TAP_FAIL ("P1-5b: AUDINFO should be 0 before AUDSTART");
+
+	/* AUDSTART */
+	rc = isaudit (h, NULL, AUDSTART);
+	if (rc != 0) {
+		TAP_FAIL ("P1-5c: AUDSTART failed");
+		isclose (h); iserase ((VB_CHAR *) fname); unlink (aname);
+		return;
+	}
+
+	/* AUDINFO after start — should return 1 */
+	rc = isaudit (h, NULL, AUDINFO);
+	if (rc == 1)
+		TAP_OK ("P1-5c: AUDINFO returns 1 after AUDSTART");
+	else
+		TAP_FAIL ("P1-5c: AUDINFO should be 1 after AUDSTART");
+
+	/* INSERT a record → should produce "aa" audit record */
+	make_rec (rbuf, 50000, 0);
+	rc = iswrite (h, (VB_CHAR *) rbuf);
+	if (rc != 0) {
+		TAP_FAIL ("P1-5d: iswrite during audit failed");
+		isclose (h); iserase ((VB_CHAR *) fname); unlink (aname);
+		return;
+	}
+
+	/* Position cursor for isrewcurr (iswrite does not set trownumber) */
+	make_rec (rbuf, 50000, 0);
+	rc = isread (h, (VB_CHAR *) rbuf, ISEQUAL);
+	if (rc != 0) {
+		TAP_DIAG ("P1-5d: isread for positioning failed iserrno=%d\n", vb_rtd->iserrno);
+		TAP_FAIL ("P1-5d: could not position cursor for rewrite");
+		isclose (h); iserase ((VB_CHAR *) fname); unlink (aname);
+		return;
+	}
+
+	/* REWRITE → should produce "rr" + "ww" audit records */
+	memcpy (rbuf + 6, "99999", 5);
+	vb_rtd->isreclen = RECLEN;
+	rc = isrewcurr (h, (VB_CHAR *) rbuf);
+	if (rc != 0) {
+		TAP_DIAG ("P1-5d: isrewcurr failed iserrno=%d\n", vb_rtd->iserrno);
+	}
+
+	/* DELETE → should produce "dd" audit record */
+	make_rec (rbuf, 50000, 0);   /* key for read */
+	isread (h, (VB_CHAR *) rbuf, ISEQUAL);
+	rc = isdelete (h, (VB_CHAR *) rbuf);
+	if (rc != 0) {
+		TAP_DIAG ("P1-5d: isdelete failed iserrno=%d\n", vb_rtd->iserrno);
+	}
+
+	/* AUDSTOP */
+	rc = isaudit (h, NULL, AUDSTOP);
+	if (rc != 0) {
+		TAP_FAIL ("P1-5d: AUDSTOP failed");
+		isclose (h); iserase ((VB_CHAR *) fname); unlink (aname);
+		return;
+	}
+
+	/* Verify audit file exists and has content */
+	/* Expected: 1 "aa" + 1 "rr" + 1 "ww" + 1 "dd" = 4 audit records */
+	/* Each record = AUDHEADSIZE(14) + RECLEN(32) = 46 bytes */
+	if (stat (aname, &st) == 0 && st.st_size > 0) {
+		int expected_size = 4 * (AUDHEADSIZE + RECLEN);
+		if (st.st_size == expected_size)
+			TAP_OK ("P1-5d: audit file has correct size (4 records)");
+		else {
+			TAP_DIAG ("P1-5d: expected %d bytes, got %lld\n",
+			          expected_size, (long long) st.st_size);
+			TAP_FAIL ("P1-5d: audit file size mismatch");
+		}
+	} else {
+		TAP_FAIL ("P1-5d: audit file empty or missing");
+	}
+
+	/* Read audit file and verify the 4 record types */
+	{
+		int fd = open (aname, O_RDONLY);
+		if (fd >= 0) {
+			struct audhead ah;
+			char types[4][3];
+			int i, nread = 0;
+			for (i = 0; i < 4; i++) {
+				ssize_t n = read (fd, &ah, AUDHEADSIZE);
+				if (n == AUDHEADSIZE) {
+					types[i][0] = ah.au_type[0];
+					types[i][1] = ah.au_type[1];
+					types[i][2] = '\0';
+					lseek (fd, RECLEN, SEEK_CUR);  /* skip row data */
+					nread++;
+				}
+			}
+			close (fd);
+
+			if (nread == 4
+				&& strcmp(types[0], "aa") == 0
+				&& strcmp(types[1], "rr") == 0
+				&& strcmp(types[2], "ww") == 0
+				&& strcmp(types[3], "dd") == 0)
+				TAP_OK ("P1-5e: audit record types correct (aa,rr,ww,dd)");
+			else {
+				TAP_DIAG ("P1-5e: read %d records, types: %s %s %s %s\n",
+				          nread,
+				          nread > 0 ? types[0] : "?",
+				          nread > 1 ? types[1] : "?",
+				          nread > 2 ? types[2] : "?",
+				          nread > 3 ? types[3] : "?");
+				TAP_FAIL ("P1-5e: audit record types incorrect");
+			}
+		} else {
+			TAP_FAIL ("P1-5e: could not open audit file for reading");
+		}
+	}
+
+	isclose (h);
+	iserase ((VB_CHAR *) fname);
+	unlink (aname);
+}
+
+/* ------------------------------------------------------------------ */
 /* main                                                                 */
 /* ------------------------------------------------------------------ */
 int
 main (void)
 {
-	/* TAP plan: P1-1:4 + P1-2:3 + P1-4:2 = 9 total (SKIPs count in plan) */
-	const int plan = 9;
+	/* TAP plan: P1-1:4 + P1-2:3 + P1-4:2 + P1-5:5 = 14 total */
+	const int plan = 14;
 	fprintf (stdout, "1..%d\n", plan);
 
 	test_p1_1_rewrite_rollback ();   /* 4 TAP assertions */
@@ -393,6 +571,8 @@ main (void)
 	TAP_SKIP ("P1-4a: update rollback (build without --enable-logging)");
 	TAP_SKIP ("P1-4b: record content after rollback (build without --enable-logging)");
 #endif
+
+	test_p1_5_audit_trail ();        /* 5 TAP assertions */
 
 	if (g_failures == 0)
 		fprintf (stdout, "# All tests passed.\n");
