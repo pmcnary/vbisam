@@ -72,6 +72,20 @@ ivbauditrecord (const int ihandle, const VB_CHAR *pctype,
 		return 0;	/* No audit active — silently succeed */
 	}
 
+	/*
+	 * P1-6 FIX: tvbpid/tvbuid are initialised by vinitpiduid() in istrans.c,
+	 * which is only called on the first logging operation (islogopen path).
+	 * Audit and logging are independent C-ISAM features: an application may
+	 * call isaudit(AUDSTART) without ever calling islogopen.  In that case
+	 * tvbpid remains 0 (calloc default) and every audit record shows PID=0.
+	 * PID 0 is never assigned to a user process, so it is a safe sentinel.
+	 * Lazily populate both fields here so ivbauditrecord is self-sufficient.
+	 */
+	if (!vb_rtd->tvbpid) {
+		vb_rtd->tvbpid = (long) getpid ();
+		vb_rtd->tvbuid = (long) getuid ();
+	}
+
 	/* Build the audit header */
 	memset (&saudhead, 0, sizeof (saudhead));
 	memcpy (saudhead.au_type, pctype, 2);

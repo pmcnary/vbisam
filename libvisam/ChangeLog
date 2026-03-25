@@ -1,11 +1,25 @@
 
+2026-03-25  pmcnary / NMICA  <pmcnary@nmica.net>
+
+	* Phase 1 SVR5 / 32-bit portability audit — all five fixes confirmed correct.
+	  See individual P1-N markers in source for detail.
+
+	* isaudit.c (ivbauditrecord): P1-6 — lazy-initialise tvbpid / tvbuid when
+	  logging has never been started (islogopen not called).  vb_rtd->tvbpid is
+	  0 after calloc; PID 0 is never a valid user process on UNIX, so it is a
+	  safe sentinel.  Without this fix, every audit record written in a process
+	  that only uses audit (no transaction log) shows au_procid=0 / au_userid=0.
+	  Fix: call getpid()/getuid() once on first entry to ivbauditrecord when
+	  tvbpid is still 0.  Subsequent calls skip the check.  Both Linux and
+	  SCO SVR5 guarantee PID > 0 for all user processes.
+
 2023-01-30  Ron Norman <rjn@inglenet.com>
 	* Updates to use the same index header as C|D-ISAM
-	* Fixes for Variable Length processing but still more 
+	* Fixes for Variable Length processing but still more
 	  work needed in ischeck
 
 2021-02-18  Ron Norman <rjn@inglenet.com>
-	* Renamed to V-ISAM 
+	* Renamed to V-ISAM
 
 2021-01-25  Ron Norman <rjn@inglenet.com>
 	* Removed use of likely/unlikely
@@ -24,7 +38,7 @@
 			Some changes are related to when LOGGING is not requested
 			At the entry to an ISAM API function vbclrstatus is called
 			to reset all of the status flags.
-			On exit from an ISAM API function vbsetstatus is called 
+			On exit from an ISAM API function vbsetstatus is called
 			which sets the 'isstat1' & 'isstat2' values.
 
 	* isinternal.h:  Numerous changes including a rewrite of the routines
